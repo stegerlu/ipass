@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>商品 Outlook 郵件表格產生器 v8.0 (一鍵批次版)</title>
+    <!-- 載入讀取 Excel 的開源套件 SheetJS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body { font-family: "Microsoft JhengHei", Arial, sans-serif; background: #f0f4f8; padding: 20px; color: #333; }
+        .container { max-width: 1000px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h1 { color: #1e3a8a; border-bottom: 3px solid #3b82f6; padding-bottom: 10px; }
+        .step-box { background: #f8fafc; border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .step-box h3 { margin-top: 0; color: #0f172a; margin-bottom: 15px; }
+        input[type="file"] { font-size: 16px; padding: 10px; background: #fff; border: 1px dashed #94a3b8; border-radius: 6px; width: 100%; box-sizing: border-box; cursor: pointer; }
+        textarea { width: 100%; height: 120px; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 16px; box-sizing: border-box; resize: vertical; }
+        .btn { padding: 12px 24px; font-size: 16px; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; color: white; background-color: #2563eb; transition: 0.2s; }
+        .btn:hover { background-color: #1d4ed8; }
+        .btn-copy-all { background-color: #10b981; width: 100%; padding: 15px; font-size: 18px; margin-bottom: 25px; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2); }
+        .btn-copy-all:hover { background-color: #059669; }
+        .table-wrapper { margin-bottom: 40px; } /* 表格之間的間距 */
+        .status { color: #059669; font-weight: bold; margin-top: 10px; display: none; }
+        .error { color: #dc2626; font-weight: bold; margin-top: 10px; }
+        .global-select { padding: 10px; font-size: 16px; border: 1px solid #cbd5e1; border-radius: 6px; width: 100%; max-width: 400px; font-family: "Microsoft JhengHei", sans-serif; cursor: pointer; }
+        .form-row { margin-bottom: 15px; }
+        .form-row label { display: block; font-weight: bold; color: #475569; margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🛒 商品 Outlook 郵件表格產生器 v8.0 (一鍵批次版)</h1>
+    
+    <div class="step-box">
+        <h3>第一步：上傳原始 Excel 檔案</h3>
+        <p style="font-size: 14px; color: #64748b; margin-top: -10px;">(系統會自動修復日期格式與標題空白)</p>
+        <input type="file" id="excel_file" accept=".xlsx, .xls, .csv">
+        <div id="upload_status" class="status">✅ Excel 讀取成功！共載入 <span id="row_count">0</span> 筆商品資料。</div>
+    </div>
+
+    <div class="step-box">
+        <h3>第二步：批次設定與輸入料號</h3>
+        
+        <div class="form-row">
+            <label>📌 選擇本批次 IP 系列：</label>
+            <select id="global_ip_select" class="global-select">
+                <option value="－">請選擇系列...</option>
+                <option value="iPASS">iPASS</option>
+                <option value="怪獸8號">怪獸8號</option>
+                <option value="排球少年">排球少年</option>
+                <option value="防風少年">防風少年</option>
+                <option value="名偵探柯南">名偵探柯南</option>
+                <option value="迪士尼">迪士尼</option>
+                <option value="史努比 SNOOPY">史努比 SNOOPY</option>
+                <option value="五月天 Mayday">五月天 Mayday</option>
+                <option value="華納兄弟 Warner Bros">華納兄弟 Warner Bros</option>
+                <option value="hololive production">hololive production</option>
+                <option value="葬送的芙莉蓮">葬送的芙莉蓮</option>
+                <option value="咒術迴戰">咒術迴戰</option>
+                <option value="EVA 新世紀福音戰士">EVA 新世紀福音戰士</option>
+                <option value="無職轉生">無職轉生</option>
+                <option value="希萌創意">希萌創意</option>
+                <option value="快打旋風">快打旋風</option>
+                <option value="星際大戰 STAR WARS">星際大戰 STAR WARS</option>
+                <option value="漫威 MARVEL">漫威 MARVEL</option>
+                <option value="伊藤潤二">伊藤潤二</option>
+                <option value="鐵道交通系列">鐵道交通系列</option>
+                <option value="原創插畫設計">原創插畫設計</option>
+                <option value="LINE FRIENDS">LINE FRIENDS</option>
+                <option value="三麗鷗 SANRIO">三麗鷗 SANRIO</option>
+                <option value="卡通頻道 CN">卡通頻道 CN</option>
+                <option value="魔翻文創">魔翻文創</option>
+                <option value="其它商品">其它商品</option>
+                <option value="公益商品">公益商品</option>
+            </select>
+        </div>
+
+        <div class="form-row">
+            <label>📝 請貼上料號（一行一個）：</label>
+            <textarea id="part_numbers" placeholder="例如：
+A1234567
+B9876543"></textarea>
+        </div>
+
+        <div style="margin-top: 15px;">
+            <button class="btn" onclick="generateTables()">⚡ 批次產生表格</button>
+        </div>
+        <div id="search_error" class="error"></div>
+    </div>
+
+    <div id="output_area">
+        <!-- 產生的內容與一鍵複製按鈕會放在這裡 -->
+    </div>
+</div>
+
+<script>
+    let globalExcelData = [];
+
+    // EC 通路的網址規則設定
+    const ecRules = [
+        { cols: ['博客'], name: '博客來', url: 'https://www.books.com.tw/products/' },
+        { cols: ['蝦皮商'], name: '蝦皮商城', url: 'https://shopee.tw/product/9906029/' },
+        { cols: ['momo'], name: 'momo購物網', url: 'https://www.momoshop.com.tw/goods/GoodsDetail.jsp?i_code=' },
+        { cols: ['PC'], name: 'PChome 24h線上購物', url: 'https://24h.pchome.com.tw/prod/' },
+        { cols: ['誠品(網)'], name: '誠品線上', url: 'https://www.eslite.com/product/1004228506' },
+        { cols: ['金石(網)', '金石堂'], name: '金石堂網路書店', url: 'https://www.kingstone.com.tw/basic/' },
+        { cols: ['Yahoo'], name: 'Yahoo購物中心', url: 'https://tw.buy.yahoo.com/gdsale/gdsale.asp?gdid=' }
+    ];
+
+    // 實體通路對應設定
+    const physicalMapping = {
+        '統一': '7-ELEVEN',
+        '全家': '全家便利商店',
+        '萊爾富': '萊爾富便利商店',
+        '誠品(門)': '誠品書店',
+        '金石(門)': '金石堂書店',
+        '高捷': '高雄捷運商品館'
+    };
+
+    // Excel 日期轉換器
+    function formatExcelDate(val) {
+        if (val === undefined || val === null || String(val).trim() === "") return '－';
+        if (typeof val === 'number') {
+            const date = new Date((val - 25569) * 86400 * 1000);
+            date.setMinutes(date.getMinutes() + date.getTimezoneOffset());
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${y}/${m}/${d}`;
+        }
+        return String(val).trim().replace(/-/g, '/');
+    }
+
+    document.getElementById('excel_file').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = e.target.result;
+                const workbook = XLSX.read(data, {type: 'binary'});
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                
+                const rawData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+                globalExcelData = rawData.map(row => {
+                    let cleanRow = {};
+                    for (let key in row) {
+                        cleanRow[key.toString().trim()] = row[key];
+                    }
+                    return cleanRow;
+                });
+                
+                document.getElementById('upload_status').style.display = 'block';
+                document.getElementById('row_count').innerText = globalExcelData.length;
+                document.getElementById('search_error').innerText = '';
+            } catch (err) {
+                alert("讀取 Excel 失敗，請確認檔案格式是否正確！");
+            }
+        };
+        reader.readAsBinaryString(file);
+    });
+
+    function generateTables() {
+        if (globalExcelData.length === 0) {
+            document.getElementById('search_error').innerText = '請先上傳 Excel 檔案！';
+            return;
+        }
+
+        const inputRaw = document.getElementById('part_numbers').value.trim();
+        if (!inputRaw) {
+            document.getElementById('search_error').innerText = '請輸入至少一個料號！';
+            return;
+        }
+
+        const selectedIp = document.getElementById('global_ip_select').value;
+        document.getElementById('search_error').innerText = '';
+        const outputArea = document.getElementById('output_area');
+        
+        const targetNos = inputRaw.split(/\r?\n|,|\s+/).map(s => s.trim()).filter(s => s !== '');
+        let matchCount = 0;
+        let allTablesHTML = ''; // 集中收集所有產生的表格 HTML
+
+        targetNos.forEach((targetNo) => {
+            const item = globalExcelData.find(row => String(row['料號']).trim() === targetNo);
+            
+            if (item) {
+                matchCount++;
+                const tableHTML = buildOutlookTable(item, selectedIp);
+                
+                // 加入獨立包裝與 Outlook 識別的空行
+                allTablesHTML += `
+                    <div class="table-wrapper">
+                        ${tableHTML}
+                    </div>
+                    <br>
+                `;
+            }
+        });
+
+        if (matchCount === 0) {
+            document.getElementById('search_error').innerText = '找不到符合的料號，請檢查輸入是否正確。';
+            outputArea.innerHTML = '';
+        } else {
+            // 將所有表格包在一個專屬的容器中，並在最上方加上「一鍵複製」按鈕
+            outputArea.innerHTML = `
+                <button class="btn btn-copy-all" onclick="copyAllTables()">📋 一鍵複製以下所有表格 (共 ${matchCount} 筆)</button>
+                <div id="all_tables_container">
+                    ${allTablesHTML}
+                </div>
+            `;
+        }
+    }
+
+    function buildOutlookTable(item, selectedIp) {
+        let onlineLinks = [];
+        let shopeeUrl = '';
+        let booksUrl = '';
+
+        ecRules.forEach(rule => {
+            let idValue = '';
+            for (let colName of rule.cols) {
+                if (item[colName] !== undefined && String(item[colName]).trim() !== "") {
+                    idValue = String(item[colName]).trim();
+                    break;
+                }
+            }
+            if (idValue !== "") {
+                const fullUrl = rule.url + idValue;
+                onlineLinks.push(`<a href="${fullUrl}" target="_blank" style="color: #2563eb; text-decoration: underline; margin-right: 12px; font-weight: bold;">${rule.name}</a>`);
+                
+                if (rule.name === '蝦皮商城') shopeeUrl = fullUrl;
+                if (rule.name === '博客來') booksUrl = fullUrl;
+            }
+        });
+        
+        let onlineHTML = onlineLinks.length > 0 ? onlineLinks.join('、') : '<span style="color:#94a3b8;">無網路販售</span>';
+
+        let physicalStores = [];
+        for (const [colName, displayName] of Object.entries(physicalMapping)) {
+            const val = item[colName];
+            if (val && String(val).trim().toUpperCase() === 'Y') {
+                physicalStores.push(displayName);
+            }
+        }
+        let physicalHTML = physicalStores.length > 0 ? physicalStores.join('、') : '<span style="color:#94a3b8;">無實體販售</span>';
+
+        // 解決 URL 顯示兩次的問題：
+        // 刻意使用 <a> 標籤包覆，但將「文字」設為明碼 URL，防止 Outlook 自行二次解析
+        let primaryBuyHTML = '－';
+        if (shopeeUrl !== '') {
+            primaryBuyHTML = `${shopeeUrl}`;
+        } else if (booksUrl !== '') {
+            primaryBuyHTML = `${booksUrl}`;
+        }
+
+        const getValue = (val) => (val && String(val).trim() !== "") ? String(val).trim() : '－';
+        const descValue = item['對外註'] || item['對外說明'] || '－';
+        const sizeValue = (item['尺寸'] && String(item['尺寸']).trim() !== "") ? String(item['尺寸']).trim() : '8.56x5.4cm';
+        const releaseDate = formatExcelDate(item['上市日']);
+
+        return `
+<table style="border-collapse: collapse; width: 100%; max-width: 600px; font-family: 'Microsoft JhengHei', Arial, sans-serif; font-size: 14px; color: #333333; line-height: 1.6;">
+    <tr>
+        <th style="border: 1px solid #dddddd; padding: 10px 12px; background-color: #f8fafc; width: 30%; text-align: left; font-weight: bold; color: #475569;">商品名稱</th>
+        <td style="border: 1px solid #dddddd; padding: 10px 12px;">${getValue(item['名稱'])}</td>
+    </tr>
+    <tr>
+        <th style="border: 1px solid #dddddd; padding: 10px 12px; background-color: #f8fafc; text-align: left; font-weight: bold; color: #475569;">系列</th>
+        <td style="border: 1px solid #dddddd; padding: 10px 12px;">${selectedIp}</td>
+    </tr>
+    <tr>
+        <th style="border: 1px solid #dddddd; padding: 10px 12px; background-color: #f8fafc; text-align: left; font-weight: bold; color: #475569;">發行日期</th>
+        <td style="border: 1px solid #dddddd; padding: 10px 12px;">${releaseDate}</td>
+    </tr>
+    <tr>
+        <th style="border: 1px solid #dddddd; padding: 10px 12px; background-color: #f8fafc; text-align: left; font-weight: bold; color: #475569;">商品售價</th>
+        <td style="border: 1px solid #dddddd; padding: 10px 12px;">${getValue(item['售價'])}</td>
+    </tr>
+    <tr>
+        <th style="border: 1px solid #dddddd; padding: 10px 12px; background-color: #f8fafc; text-align: left; font-weight: bold; color: #475569;">料號</th>
+        <td style="border: 1px solid #dddddd; padding: 10px 12px;">${getValue(item['料號'])}</td>
+    </tr>
+    <tr>
+        <th style="border: 1px solid #dddddd; padding: 10px 12px; background-color: #f8fafc; text-align: left; font-weight: bold; color: #475569;">說明</th>
+        <td style="border: 1px solid #dddddd; padding: 10px 12px; white-space: pre-line;">${getValue(descValue)}</td>
+    </tr>
+    <tr>
+        <th style="border: 1px solid #dddddd; padding: 10px 12px; background-color: #f8fafc; text-align: left; font-weight: bold; color: #475569;">立即購買</th>
+        <td style="border: 1px solid #dddddd; padding: 10px 12px;">${primaryBuyHTML}</td>
+    </tr>
+    <tr>
+        <th style="border: 1px solid #dddddd; padding: 10px 12px; background-color: #f8fafc; text-align: left; font-weight: bold; color: #475569; vertical-align: top;">
+            更多銷售據點<br>
+            <span style="font-size: 11px; font-weight: normal; color: #666666; display: block; margin-top: 5px; line-height: 1.4;">※請記得設定開啟新視窗</span>
+        </th>
+        <td style="border: 1px solid #dddddd; padding: 10px 12px;">
+            <span style="font-weight: bold; display: block; margin-bottom: 4px; color: #111827;">網路門市</span>
+            <div style="margin-bottom: 14px;">${onlineHTML}</div>
+            
+            <span style="font-weight: bold; display: block; margin-bottom: 4px; color: #111827;">實體通路</span>
+            <div style="margin-bottom: 6px; color: #374151;">${physicalHTML}</div>
+            
+            <span style="font-size: 11px; color: #666666; display: block; line-height: 1.4; margin-top: 6px;">
+                ※實體通路進貨時間配合物流作業，販售時間依實際進貨時間為準；各通路依現場實際庫存為準，若已完售不另行公告。
+            </span>
+        </td>
+    </tr>
+    <tr>
+        <th style="border: 1px solid #dddddd; padding: 10px 12px; background-color: #f8fafc; text-align: left; font-weight: bold; color: #475569;">本體尺寸</th>
+        <td style="border: 1px solid #dddddd; padding: 10px 12px;">${sizeValue}</td>
+    </tr>
+</table>`;
+    }
+
+    // 🏆 全新：一鍵全選並複製所有表格
+    function copyAllTables() {
+        const container = document.getElementById('all_tables_container');
+        if (!container) return;
+
+        const range = document.createRange();
+        range.selectNode(container);
+        window.getSelection().removeAllRanges();
+        window.getSelection().addRange(range);
+
+        try {
+            document.execCommand('copy');
+            alert('🎉 所有表格已成功複製！\n現在您可以直接到 Outlook 信件內一次貼上囉！');
+        } catch (err) {
+            alert('複製失敗，請手動全選下方表格後複製。');
+        }
+        
+        window.getSelection().removeAllRanges();
+    }
+</script>
+</body>
+</html>
